@@ -161,42 +161,49 @@
   }
   .overlay.hidden { display: none; }
   .overlay.pause { z-index: 4; background: rgba(253, 246, 227, .45); cursor: pointer; }
-  /* ================= 手机端虚拟摇杆（仅指针为 coarse 的触屏设备显示） ================= */
-  .touch-pad {
+  /* ================= 手机端方向键（十字键，仅指针为 coarse 的触屏设备显示） ================= */
+  .mobile-pad {
+    display: none;
     position: absolute;
-    /* 位置：贴住左下角但留出安全边距，同时避开刘海 / 圆角（安全区） */
-    left: max(12px, env(safe-area-inset-left));
+    /* 横屏：贴住画布右下角，留出安全边距 */
+    right: max(12px, env(safe-area-inset-right));
     bottom: max(12px, env(safe-area-inset-bottom));
-    width: clamp(72px, 17cqw, 104px); aspect-ratio: 1 / 1;
-    z-index: 3; display: none; touch-action: none;
+    z-index: 3;
+    --pad-key: clamp(46px, 11cqw, 62px);
+    grid-template-columns: repeat(3, var(--pad-key));
+    grid-template-rows: repeat(3, var(--pad-key));
+    gap: 6px;
+    touch-action: none;
     -webkit-tap-highlight-color: transparent;
   }
-  /* 隐形放大点击热区：不必精确按在圆盘内，略微偏移也能抓住摇杆 */
-  .touch-pad::before {
-    content: ''; position: absolute; inset: -20px; border-radius: 50%;
+  .mobile-pad.off { display: none; }   /* 非游戏进行中：隐藏，避免挡住开始 / 结算卡片 */
+  .pad-btn {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: inherit; font-size: calc(var(--pad-key) * .38); line-height: 1;
+    color: #6a5638;
+    background: rgba(255, 255, 255, .82);
+    border: 2px solid rgba(59, 52, 42, .16);
+    border-radius: 15px;
+    box-shadow: 0 5px 16px rgba(59, 52, 42, .16), inset 0 1px 0 rgba(255, 255, 255, .9);
+    cursor: pointer; touch-action: none;
+    -webkit-user-select: none; user-select: none;
+    transition: background .08s, border-color .08s, transform .08s, box-shadow .08s;
   }
-  .touch-pad.off { display: none; }              /* 非游戏进行中：隐藏，避免挡住开始 / 结算卡片 */
-  .touch-base {
-    position: absolute; inset: 0; border-radius: 50%;
-    background: rgba(255, 255, 255, .40);
-    border: 2px solid rgba(59, 52, 42, .20);
-    box-shadow: inset 0 2px 10px rgba(59, 52, 42, .08), 0 4px 14px rgba(59, 52, 42, .10);
+  .pad-btn.pressed {
+    background: rgba(231, 76, 60, .18);
+    border-color: rgba(231, 76, 60, .52);
+    transform: scale(.94);
+    box-shadow: 0 2px 6px rgba(59, 52, 42, .14);
   }
-  .touch-knob {
-    position: absolute; left: 50%; top: 50%;
-    width: 46%; height: 46%; margin-left: -23%; margin-top: -23%;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, .86);
-    border: 2px solid rgba(231, 76, 60, .40);
-    box-shadow: 0 3px 10px rgba(59, 52, 42, .18);
-    will-change: transform;
-    transition: transform .05s ease-out;         /* 松手回弹（拖动中无过渡，1:1 跟手） */
-  }
-  .touch-pad.dragging .touch-knob { transition: none; } /* 拖动中实时跟手 */
+  .pad-btn.up { grid-area: 1 / 2; }
+  .pad-btn.left { grid-area: 2 / 1; }
+  .pad-btn.right { grid-area: 2 / 3; }
+  .pad-btn.down { grid-area: 3 / 2; }
   /* 触屏设备：按钮放大到易点尺寸，画布禁用默认手势
      （用 any-pointer 覆盖"笔记本自带触摸屏 + 鼠标"的混合设备，纯桌面环境不受影响） */
   @media (any-pointer: coarse) {
-    .touch-pad:not(.off) { display: block; }
+    .mobile-pad:not(.off) { display: grid; }
     .canvas-holder, canvas { touch-action: none; }
     .icon-btn { width: 42px; height: 42px; font-size: 17px; }
     .icon-btn.touch-only { display: block; }
@@ -351,6 +358,61 @@
     from { opacity: 0; transform: translateY(16px); }
     to   { opacity: 1; transform: translateY(0); }
   }
+
+  /* ================= 竖屏适配：HUD 顶部 / 画布居中 / 方向键底部，整屏铺满 =================
+     遮罩卡片同步提升为整屏显示，避免在窄画布里被压成看不清的小字（正常桌面横屏不受影响） */
+  @media (orientation: portrait) {
+    body { align-items: stretch; justify-content: stretch; }
+    .stage {
+      width: 100%; max-width: 640px; height: 100%;
+      margin: 0 auto;
+      display: flex; flex-direction: column;
+    }
+    .canvas-holder { margin: auto 0; }   /* 在 HUD 与方向键之间垂直居中 */
+    .mobile-pad {
+      position: static;                  /* 竖屏：方向键进入文档流，落在画布下方 */
+      margin: 14px auto 0;
+      --pad-key: clamp(56px, 17vw, 76px);
+      gap: 8px;
+    }
+    /* .stage 带 layout containment，fixed 遮罩以 stage 为基准铺满整屏 */
+    .overlay { position: fixed; inset: 0; border-radius: 0; padding: 10px; background: rgba(253, 246, 227, .78); }
+    .ovl-inner {
+      width: min(100%, 460px); max-width: 460px; max-height: 100%;
+      padding: 18px 16px; gap: 10px; border-radius: 22px;
+    }
+    #screen-end .ovl-inner { padding: 16px; gap: 8px; }
+    .badge { font-size: 12px; letter-spacing: .35em; text-indent: .35em; }
+    #title-pixel { width: min(74vw, 300px); }
+    #screen-start .title { font-size: clamp(26px, 9vw, 34px); letter-spacing: .02em; text-indent: .02em; text-shadow: 2px 2px 0 rgba(140, 30, 20, .9); }
+    .title.small { font-size: clamp(22px, 7vw, 28px); }
+    .subtitle { font-size: 12px; }
+    .rules { font-size: 13px; padding: 8px 12px; border-radius: 12px; line-height: 1.5; }
+    .legend { font-size: 12.5px; gap: 6px; line-height: 1.5; }
+    .legend li { gap: 8px; }
+    .dot { width: 10px; height: 10px; }
+    .pick-row { gap: 8px; width: 100%; }
+    .pick-label { font-size: 12px; }
+    .pick-group { gap: 8px; flex: 1; }
+    .pick { flex: 1; font-size: 14px; padding: 9px 10px; border-radius: 12px; }
+    .btn { font-size: 16px; padding: 13px 28px; margin-top: 4px; letter-spacing: .18em; text-indent: .18em; }
+    .btn-ghost { padding: 11px 22px; }
+    .hint { font-size: 11.5px; line-height: 1.5; }
+    .end-pct { font-size: clamp(38px, 13vw, 50px); }
+    .end-ratio { font-size: 15px; }
+    .end-detail { font-size: 12.5px; }
+    .end-stats { gap: 8px; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+    .stat { padding: 8px 6px; border-radius: 12px; }
+    .stat-ico { font-size: 15px; }
+    .stat-num { font-size: 17px; }
+    .stat-label { font-size: 10.5px; }
+    .end-record { font-size: 12.5px; }
+    .end-record.new-record { font-size: 15px; }
+    .end-actions { gap: 10px; }
+    .pause-title { font-size: 26px; }
+    .pause-hint { font-size: 12px; }
+    #tip-hint { font-size: 13px; padding: 8px 14px; }
+  }
 </style>
 </head>
 <body>
@@ -379,12 +441,6 @@
     <!-- 游戏画布 + 遮罩界面 -->
     <div class="canvas-holder">
       <canvas id="game" width="960" height="600"></canvas>
-
-      <!-- 手机端虚拟摇杆：按住拖动控制方向，松手回中 -->
-      <div id="touch-pad" class="touch-pad off" aria-hidden="true">
-        <div class="touch-base"></div>
-        <div id="touch-knob" class="touch-knob"></div>
-      </div>
 
       <!-- 开局提示：中央淡入，3 秒后自动消失 -->
       <div id="tip-hint">靠近路人即可传染，躲开医生！</div>
@@ -428,7 +484,7 @@
           <p class="hint" id="diff-note"></p>
           <button id="btn-start" class="btn">开始游戏</button>
           <p class="hint" id="start-goal">在 90 秒内把感染率做到 65%，达标的瞬间即获胜</p>
-          <p class="hint">WASD / 方向键移动 · P 或 Esc 暂停 · M 静音 · 回车开始</p>
+          <p class="hint">WASD / 方向键移动 · 手机点按屏幕方向键 · P 或 Esc 暂停 · M 静音 · 回车开始</p>
         </div>
       </div>
 
@@ -454,6 +510,14 @@
           </div>
         </div>
       </div>
+    </div>
+
+    <!-- 手机端十字方向键：按住即朝该方向移动，支持两根手指同时按出斜向 -->
+    <div id="mobile-pad" class="mobile-pad off" aria-hidden="true">
+      <button class="pad-btn up" data-dir="up" aria-label="向上">▲</button>
+      <button class="pad-btn left" data-dir="left" aria-label="向左">◀</button>
+      <button class="pad-btn right" data-dir="right" aria-label="向右">▶</button>
+      <button class="pad-btn down" data-dir="down" aria-label="向下">▼</button>
     </div>
   </div>
 
@@ -571,7 +635,6 @@ const DM_KING_REINFECT_CD = 2.5;               // 病毒王把灰色普通人重
  * ====================================================== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
-let touchPadRect = null;   // 摇杆矩形缓存（须在 fitCanvas 首次调用前声明，避免 TDZ 报错）
 /* 高 DPI 自适应：按显示尺寸 × devicePixelRatio 重建画布位图，再用 setTransform 将逻辑坐标
    （960 × 600）映射到位图。任意窗口尺寸下画面都清晰、不变形、不会因放大而发虚 */
 function fitCanvas() {
@@ -583,7 +646,6 @@ function fitCanvas() {
     canvas.width = w;                 // 修改尺寸会重置上下文状态
     canvas.height = h;
     ctx.setTransform(w / WIDTH, 0, 0, h / HEIGHT, 0, 0);
-    touchPadRect = null;              // 画布尺寸变化 → 摇杆矩形缓存失效
   }
 }
 window.addEventListener('resize', fitCanvas);
@@ -614,8 +676,8 @@ const btnHome = document.getElementById('btn-home');
 const btnPause = document.getElementById('btn-pause');
 const btnMute = document.getElementById('btn-mute');
 const btnFull = document.getElementById('btn-full');
-const touchPad = document.getElementById('touch-pad');
-const touchKnob = document.getElementById('touch-knob');
+const touchPad = document.getElementById('mobile-pad');
+const padBtns = Array.from(touchPad.querySelectorAll('.pad-btn'));
 const startGoal = document.getElementById('start-goal');
 const hudMetric = document.getElementById('hud-metric');
 const startRules = document.getElementById('start-rules');
@@ -822,79 +884,67 @@ window.addEventListener('blur', function () { keys.clear(); resetTouch(); }); //
 canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); }); // 手机长按画布不弹系统菜单
 
 /* ======================================================
- * 五-2、触屏虚拟摇杆（手机端移动）
+ * 五-2、手机端十字方向键（触屏移动输入）
  * ====================================================== */
-const touchVec = { x: 0, y: 0 };   // 归一化方向 × 力度（死区外 0~1）
-let touchId = null;                // 当前按在摇杆上的手指
-const TOUCH_DEAD = 0.05;           // 死区 5%（原 16% 过大，轻推几乎无反应）
+const touchVec = { x: 0, y: 0 };   // 归一化方向（0 / ±1，斜向为归一化后的 0.707）
+const padPointers = new Map();     // pointerId -> 方向：支持两根手指同时按出斜向
 
-/* 松手回中：方向清零，摇杆头弹回中心 */
+/* 松手 / 暂停：方向清零 + 按钮取消按下态 */
 function resetTouch() {
   touchVec.x = 0; touchVec.y = 0;
-  touchId = null;
-  touchPad.classList.remove('dragging');
-  touchKnob.style.transform = '';
-  touchKnob.style.transition = '';   // 恢复 CSS 过渡，仅用于松手回弹
-  touchPadRect = null;
+  padPointers.clear();
+  padBtns.forEach(function (b) { b.classList.remove('pressed'); });
 }
 
-/* 按手指位置计算方向：超出半径时钳制在边缘，带死区避免误触抖动
-   仅用缓存矩形计算，pointermove 中不再触发同步布局，降低输入延迟 */
-function setTouchFrom(e) {
-  const base = touchPadRect || (touchPadRect = touchPad.getBoundingClientRect());
-  const cx = base.left + base.width / 2, cy = base.top + base.height / 2;
-  const max = base.width / 2;
-  let dx = e.clientX - cx, dy = e.clientY - cy;
-  const rawLen = Math.hypot(dx, dy);
-  if (rawLen > max) { dx *= max / rawLen; dy *= max / rawLen; } // 超出半径：钳制在边缘
-  const len = Math.hypot(dx, dy);                    // 钳制后的实际位移（决定力度）
-  touchKnob.style.transform = 'translate3d(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px,0)';
-  if (len === 0) { touchVec.x = 0; touchVec.y = 0; return; }
-  const mag = len / max;
-  if (mag <= TOUCH_DEAD) { touchVec.x = 0; touchVec.y = 0; return; }
-  /* 死区外迅速拉满：推过约 1/5 半径即达到 100% 力度，小幅操作也能立刻响应 */
-  const k = Math.min(1, (mag - TOUCH_DEAD) / 0.15);
-  touchVec.x = dx / len * k;
-  touchVec.y = dy / len * k;
+/* 由当前按住的按钮合成方向向量：左右 / 上下互相抵消，斜向自动归一化 */
+function updatePadVector() {
+  let x = 0, y = 0;
+  padPointers.forEach(function (dir) {
+    if (dir === 'left') x -= 1;
+    else if (dir === 'right') x += 1;
+    else if (dir === 'up') y -= 1;
+    else if (dir === 'down') y += 1;
+  });
+  const len = Math.hypot(x, y);
+  if (len > 0) { touchVec.x = x / len; touchVec.y = y / len; }
+  else { touchVec.x = 0; touchVec.y = 0; }
 }
 
-touchPad.addEventListener('pointerdown', function (e) {
-  if (e.pointerType === 'mouse' && e.button !== 0) return;
-  e.preventDefault();
-  cacheTouchRect();                       // 按下时刷新一次矩形，拖动期间复用
-  touchId = e.pointerId;
-  try { touchPad.setPointerCapture(e.pointerId); } catch (err) { /* 旧浏览器忽略 */ }
-  touchPad.classList.add('dragging');
-  touchKnob.style.transition = 'none';   // 拖动中禁用过渡：摇杆头 1:1 跟手，消除 50ms 视觉滞后
-  setTouchFrom(e);
-});
-touchPad.addEventListener('pointermove', function (e) {
-  if (e.pointerId !== touchId) return;
-  e.preventDefault();
-  setTouchFrom(e);
-});
-['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
-  touchPad.addEventListener(ev, function (e) {
-    if (e.pointerId !== touchId) return;
-    resetTouch();
+padBtns.forEach(function (btn) {
+  const dir = btn.dataset.dir;
+  btn.addEventListener('pointerdown', function (e) {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    try { btn.setPointerCapture(e.pointerId); } catch (err) { /* 旧浏览器忽略 */ }
+    padPointers.set(e.pointerId, dir);
+    btn.classList.add('pressed');
+    updatePadVector();
+  });
+  /* 松开 / 指针被系统收回：移除该手指对应的方向（同方向还有别的手指按着则保持高亮） */
+  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
+    btn.addEventListener(ev, function (e) {
+      if (!padPointers.has(e.pointerId)) return;
+      padPointers.delete(e.pointerId);
+      const stillDown = Array.from(padPointers.values()).indexOf(dir) !== -1;
+      if (!stillDown) btn.classList.remove('pressed');
+      updatePadVector();
+    });
   });
 });
 
-/* 摇杆显隐：只在游戏进行中显示，开始 / 暂停 / 结算界面隐藏 */
+/* 方向键显隐：只在游戏进行中显示，开始 / 暂停 / 结算界面隐藏 */
 function syncTouchPad() {
   const show = state === 'playing' && !paused;
   touchPad.classList.toggle('off', !show);
   if (!show) resetTouch();
 }
 
-/* 玩家是否有移动输入（键盘或摇杆）：医生据此判断是否感知玩家 */
+/* 玩家是否有移动输入（键盘或方向键）：医生据此判断是否感知玩家 */
 function playerHasInput() {
   if (Math.abs(touchVec.x) > 0.01 || Math.abs(touchVec.y) > 0.01) return true;
   for (const k of GAME_KEYS) { if (keys.has(k)) return true; }
   return false;
 }
-/* 缓存摇杆矩形：窗口尺寸 / 全屏 / 横竖屏变化时失效，下次按下重新测量 */
-function cacheTouchRect() { touchPadRect = touchPad.getBoundingClientRect(); }
 
 /* ======================================================
  * 六、暂停与静音控制
