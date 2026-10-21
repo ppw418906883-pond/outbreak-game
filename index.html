@@ -161,49 +161,41 @@
   }
   .overlay.hidden { display: none; }
   .overlay.pause { z-index: 4; background: rgba(253, 246, 227, .45); cursor: pointer; }
-  /* ================= 手机端方向键（十字键，仅指针为 coarse 的触屏设备显示） ================= */
-  .mobile-pad {
-    display: none;
+  /* ================= 手机端虚拟摇杆（仅指针为 coarse 的触屏设备显示） ================= */
+  .touch-pad {
     position: absolute;
-    /* 横屏：贴住画布右下角，留出安全边距 */
-    right: max(12px, env(safe-area-inset-right));
+    left: max(12px, env(safe-area-inset-left));
     bottom: max(12px, env(safe-area-inset-bottom));
-    z-index: 3;
-    --pad-key: clamp(46px, 11cqw, 62px);
-    grid-template-columns: repeat(3, var(--pad-key));
-    grid-template-rows: repeat(3, var(--pad-key));
-    gap: 6px;
-    touch-action: none;
+    width: clamp(92px, 22cqw, 124px); aspect-ratio: 1 / 1;
+    z-index: 3; display: none; touch-action: none;
     -webkit-tap-highlight-color: transparent;
   }
-  .mobile-pad.off { display: none; }   /* 非游戏进行中：隐藏，避免挡住开始 / 结算卡片 */
-  .pad-btn {
-    width: 100%; height: 100%;
-    display: flex; align-items: center; justify-content: center;
-    font-family: inherit; font-size: calc(var(--pad-key) * .38); line-height: 1;
-    color: #6a5638;
-    background: rgba(255, 255, 255, .82);
-    border: 2px solid rgba(59, 52, 42, .16);
-    border-radius: 15px;
-    box-shadow: 0 5px 16px rgba(59, 52, 42, .16), inset 0 1px 0 rgba(255, 255, 255, .9);
-    cursor: pointer; touch-action: none;
-    -webkit-user-select: none; user-select: none;
-    transition: background .08s, border-color .08s, transform .08s, box-shadow .08s;
+  /* 隐形放大点击热区：不必精确按在圆盘内，略微偏移也能抓住摇杆 */
+  .touch-pad::before {
+    content: ''; position: absolute; inset: -20px; border-radius: 50%;
   }
-  .pad-btn.pressed {
-    background: rgba(231, 76, 60, .18);
-    border-color: rgba(231, 76, 60, .52);
-    transform: scale(.94);
-    box-shadow: 0 2px 6px rgba(59, 52, 42, .14);
+  .touch-pad.off { display: none; }   /* 非游戏进行中：隐藏，避免挡住开始 / 结算卡片 */
+  .touch-base {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: rgba(255, 255, 255, .42);
+    border: 2px solid rgba(59, 52, 42, .20);
+    box-shadow: inset 0 2px 10px rgba(59, 52, 42, .08), 0 4px 14px rgba(59, 52, 42, .10);
   }
-  .pad-btn.up { grid-area: 1 / 2; }
-  .pad-btn.left { grid-area: 2 / 1; }
-  .pad-btn.right { grid-area: 2 / 3; }
-  .pad-btn.down { grid-area: 3 / 2; }
+  .touch-knob {
+    position: absolute; left: 50%; top: 50%;
+    width: 46%; height: 46%; margin-left: -23%; margin-top: -23%;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, .88);
+    border: 2px solid rgba(231, 76, 60, .42);
+    box-shadow: 0 3px 10px rgba(59, 52, 42, .18);
+    will-change: transform;
+    transition: transform .05s ease-out;         /* 松手回弹（拖动中无过渡，1:1 跟手） */
+  }
+  .touch-pad.dragging .touch-knob { transition: none; } /* 拖动中实时跟手，消除 50ms 视觉滞后 */
   /* 触屏设备：按钮放大到易点尺寸，画布禁用默认手势
      （用 any-pointer 覆盖"笔记本自带触摸屏 + 鼠标"的混合设备，纯桌面环境不受影响） */
   @media (any-pointer: coarse) {
-    .mobile-pad:not(.off) { display: grid; }
+    .touch-pad:not(.off) { display: block; }
     .canvas-holder, canvas { touch-action: none; }
     .icon-btn { width: 42px; height: 42px; font-size: 17px; }
     .icon-btn.touch-only { display: block; }
@@ -369,11 +361,10 @@
       display: flex; flex-direction: column;
     }
     .canvas-holder { margin: auto 0; }   /* 在 HUD 与方向键之间垂直居中 */
-    .mobile-pad {
-      position: static;                  /* 竖屏：方向键进入文档流，落在画布下方 */
-      margin: 14px auto 0;
-      --pad-key: clamp(56px, 17vw, 76px);
-      gap: 8px;
+    .touch-pad {
+      position: static;                  /* 竖屏：摇杆进入文档流，落在画布下方 */
+      margin: 16px auto 4px;
+      width: clamp(120px, 34vw, 156px);
     }
     /* .stage 带 layout containment，fixed 遮罩以 stage 为基准铺满整屏 */
     .overlay { position: fixed; inset: 0; border-radius: 0; padding: 10px; background: rgba(253, 246, 227, .78); }
@@ -484,7 +475,7 @@
           <p class="hint" id="diff-note"></p>
           <button id="btn-start" class="btn">开始游戏</button>
           <p class="hint" id="start-goal">在 90 秒内把感染率做到 65%，达标的瞬间即获胜</p>
-          <p class="hint">WASD / 方向键移动 · 手机点按屏幕方向键 · P 或 Esc 暂停 · M 静音 · 回车开始</p>
+          <p class="hint">WASD / 方向键移动 · 手机拖动左下摇杆 · P 或 Esc 暂停 · M 静音 · 回车开始</p>
         </div>
       </div>
 
@@ -512,12 +503,10 @@
       </div>
     </div>
 
-    <!-- 手机端十字方向键：按住即朝该方向移动，支持两根手指同时按出斜向 -->
-    <div id="mobile-pad" class="mobile-pad off" aria-hidden="true">
-      <button class="pad-btn up" data-dir="up" aria-label="向上">▲</button>
-      <button class="pad-btn left" data-dir="left" aria-label="向左">◀</button>
-      <button class="pad-btn right" data-dir="right" aria-label="向右">▶</button>
-      <button class="pad-btn down" data-dir="down" aria-label="向下">▼</button>
+    <!-- 手机端虚拟摇杆：按住拖动控制方向，松手回中 -->
+    <div id="touch-pad" class="touch-pad off" aria-hidden="true">
+      <div class="touch-base"></div>
+      <div id="touch-knob" class="touch-knob"></div>
     </div>
   </div>
 
@@ -530,6 +519,9 @@
  * ====================================================== */
 const WIDTH = 960;                 // 画布宽度（像素）
 const HEIGHT = 600;                // 画布高度（像素）
+/* 相机缩放：窄屏（手机竖屏）自动放大，让角色在屏幕上更大更清晰；宽屏保持 1 看全场地 */
+const CAMERA_TARGET_PPU = 0.95;    // 目标：1 个世界单位占多少 CSS 像素（越大角色越大）
+const CAMERA_ZOOM_MAX = 2.1;       // 最大放大倍数（限制裁切范围，仍能提前看到附近医生）
 
 /* 活动区域：画布中央 85% 面积（整体缩小 15%），提高人群密度 */
 const ARENA_SCALE = 0.85;          // 活动区域占画布面积比例
@@ -635,6 +627,7 @@ const DM_KING_REINFECT_CD = 2.5;               // 病毒王把灰色普通人重
  * ====================================================== */
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+let viewZoom = 1;   // 相机缩放（由 fitCanvas 按画布显示宽度计算，窄屏自动放大）
 /* 高 DPI 自适应：按显示尺寸 × devicePixelRatio 重建画布位图，再用 setTransform 将逻辑坐标
    （960 × 600）映射到位图。任意窗口尺寸下画面都清晰、不变形、不会因放大而发虚 */
 function fitCanvas() {
@@ -647,6 +640,18 @@ function fitCanvas() {
     canvas.height = h;
     ctx.setTransform(w / WIDTH, 0, 0, h / HEIGHT, 0, 0);
   }
+  /* 画布越窄，角色在屏幕上越小 → 按目标 ppu 反推放大倍数（宽屏不放大） */
+  viewZoom = Math.min(CAMERA_ZOOM_MAX, Math.max(1, CAMERA_TARGET_PPU / (rect.width / WIDTH)));
+}
+/* 相机：放大时以玩家为中心，并夹在场地边界内，避免画面露出世界外的空白 */
+function applyCamera() {
+  if (viewZoom <= 1.001) return;
+  const vw = WIDTH / viewZoom, vh = HEIGHT / viewZoom;
+  const camX = Math.min(Math.max(player.x, vw / 2), WIDTH - vw / 2);
+  const camY = Math.min(Math.max(player.y, vh / 2), HEIGHT - vh / 2);
+  ctx.translate(WIDTH / 2, HEIGHT / 2);
+  ctx.scale(viewZoom, viewZoom);
+  ctx.translate(-camX, -camY);
 }
 window.addEventListener('resize', fitCanvas);
 fitCanvas();
@@ -676,8 +681,8 @@ const btnHome = document.getElementById('btn-home');
 const btnPause = document.getElementById('btn-pause');
 const btnMute = document.getElementById('btn-mute');
 const btnFull = document.getElementById('btn-full');
-const touchPad = document.getElementById('mobile-pad');
-const padBtns = Array.from(touchPad.querySelectorAll('.pad-btn'));
+const touchPad = document.getElementById('touch-pad');
+const touchKnob = document.getElementById('touch-knob');
 const startGoal = document.getElementById('start-goal');
 const hudMetric = document.getElementById('hud-metric');
 const startRules = document.getElementById('start-rules');
@@ -884,62 +889,73 @@ window.addEventListener('blur', function () { keys.clear(); resetTouch(); }); //
 canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); }); // 手机长按画布不弹系统菜单
 
 /* ======================================================
- * 五-2、手机端十字方向键（触屏移动输入）
+ * 五-2、触屏虚拟摇杆（手机端移动）
  * ====================================================== */
-const touchVec = { x: 0, y: 0 };   // 归一化方向（0 / ±1，斜向为归一化后的 0.707）
-const padPointers = new Map();     // pointerId -> 方向：支持两根手指同时按出斜向
+const touchVec = { x: 0, y: 0 };   // 归一化方向 × 力度（死区外 0~1）
+let touchId = null;                // 当前按在摇杆上的手指
+let touchPadRect = null;           // 摇杆矩形缓存（按下时测量，拖动期间复用，避免逐帧同步布局）
+const TOUCH_DEAD = 0.04;           // 死区 4%：极小抖动不触发，同时几乎感觉不到延迟
+const TOUCH_FULL = 0.14;           // 推过 14% 半径即满力（越界立刻钳制到边缘）
 
-/* 松手 / 暂停：方向清零 + 按钮取消按下态 */
+/* 松手回中：方向清零，摇杆头弹回中心 */
 function resetTouch() {
   touchVec.x = 0; touchVec.y = 0;
-  padPointers.clear();
-  padBtns.forEach(function (b) { b.classList.remove('pressed'); });
+  touchId = null;
+  touchPad.classList.remove('dragging');
+  touchKnob.style.transform = '';
+  touchKnob.style.transition = '';   // 恢复 CSS 过渡，仅用于松手回弹
+  touchPadRect = null;
 }
 
-/* 由当前按住的按钮合成方向向量：左右 / 上下互相抵消，斜向自动归一化 */
-function updatePadVector() {
-  let x = 0, y = 0;
-  padPointers.forEach(function (dir) {
-    if (dir === 'left') x -= 1;
-    else if (dir === 'right') x += 1;
-    else if (dir === 'up') y -= 1;
-    else if (dir === 'down') y += 1;
-  });
-  const len = Math.hypot(x, y);
-  if (len > 0) { touchVec.x = x / len; touchVec.y = y / len; }
-  else { touchVec.x = 0; touchVec.y = 0; }
+/* 按手指位置计算方向：超出半径时钳制在边缘
+   只用缓存矩形计算，pointermove 中不触发同步布局，降低输入延迟 */
+function setTouchFrom(e) {
+  const base = touchPadRect || (touchPadRect = touchPad.getBoundingClientRect());
+  const cx = base.left + base.width / 2, cy = base.top + base.height / 2;
+  const max = base.width / 2;
+  let dx = e.clientX - cx, dy = e.clientY - cy;
+  const rawLen = Math.hypot(dx, dy);
+  if (rawLen > max) { dx *= max / rawLen; dy *= max / rawLen; } // 超出半径：钳制在边缘
+  const len = Math.hypot(dx, dy);
+  touchKnob.style.transform = 'translate3d(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px,0)';
+  if (len === 0) { touchVec.x = 0; touchVec.y = 0; return; }
+  const mag = len / max;
+  if (mag <= TOUCH_DEAD) { touchVec.x = 0; touchVec.y = 0; return; }
+  const k = Math.min(1, (mag - TOUCH_DEAD) / TOUCH_FULL);   // 死区外迅速拉满
+  touchVec.x = dx / len * k;
+  touchVec.y = dy / len * k;
 }
 
-padBtns.forEach(function (btn) {
-  const dir = btn.dataset.dir;
-  btn.addEventListener('pointerdown', function (e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
-    e.preventDefault();
-    try { btn.setPointerCapture(e.pointerId); } catch (err) { /* 旧浏览器忽略 */ }
-    padPointers.set(e.pointerId, dir);
-    btn.classList.add('pressed');
-    updatePadVector();
-  });
-  /* 松开 / 指针被系统收回：移除该手指对应的方向（同方向还有别的手指按着则保持高亮） */
-  ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
-    btn.addEventListener(ev, function (e) {
-      if (!padPointers.has(e.pointerId)) return;
-      padPointers.delete(e.pointerId);
-      const stillDown = Array.from(padPointers.values()).indexOf(dir) !== -1;
-      if (!stillDown) btn.classList.remove('pressed');
-      updatePadVector();
-    });
+touchPad.addEventListener('pointerdown', function (e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+  touchPadRect = touchPad.getBoundingClientRect();   // 按下时测量一次
+  touchId = e.pointerId;
+  try { touchPad.setPointerCapture(e.pointerId); } catch (err) { /* 旧浏览器忽略 */ }
+  touchPad.classList.add('dragging');
+  touchKnob.style.transition = 'none';   // 拖动中禁用过渡：摇杆头 1:1 跟手
+  setTouchFrom(e);
+});
+touchPad.addEventListener('pointermove', function (e) {
+  if (e.pointerId !== touchId) return;
+  e.preventDefault();
+  setTouchFrom(e);
+});
+['pointerup', 'pointercancel', 'lostpointercapture'].forEach(function (ev) {
+  touchPad.addEventListener(ev, function (e) {
+    if (e.pointerId !== touchId) return;
+    resetTouch();
   });
 });
 
-/* 方向键显隐：只在游戏进行中显示，开始 / 暂停 / 结算界面隐藏 */
+/* 摇杆显隐：只在游戏进行中显示，开始 / 暂停 / 结算界面隐藏 */
 function syncTouchPad() {
   const show = state === 'playing' && !paused;
   touchPad.classList.toggle('off', !show);
   if (!show) resetTouch();
 }
 
-/* 玩家是否有移动输入（键盘或方向键）：医生据此判断是否感知玩家 */
+/* 玩家是否有移动输入（键盘或摇杆）：医生据此判断是否感知玩家 */
 function playerHasInput() {
   if (Math.abs(touchVec.x) > 0.01 || Math.abs(touchVec.y) > 0.01) return true;
   for (const k of GAME_KEYS) { if (keys.has(k)) return true; }
@@ -1872,6 +1888,7 @@ function drawKing(k) {
 
 function draw() {
   ctx.save();
+  applyCamera();   // 窄屏放大视野：以玩家为中心（宽屏 zoom=1，无任何影响）
 
   /* 受伤震动：轻微缩放 + 平移抖动 */
   if (shakeT > 0) {
@@ -2111,9 +2128,7 @@ function draw() {
     }
   }
 
-  ctx.restore(); // 结束震动变换
-
-  /* 活动区域（画布中央 85% 面积）：外圈轻微压暗 + 暖色细边框（2px #d4b896）标识活动范围 */
+  /* 活动区域（画布中央 85% 面积）：外圈轻微压暗 + 暖色细边框（2px #d4b896）标识活动范围（世界坐标，随相机一起缩放） */
   ctx.fillStyle = 'rgba(59, 52, 42, 0.05)';
   ctx.fillRect(0, 0, WIDTH, ARENA_Y0);
   ctx.fillRect(0, ARENA_Y1, WIDTH, HEIGHT - ARENA_Y1);
@@ -2123,7 +2138,9 @@ function draw() {
   ctx.strokeStyle = '#d4b896';
   ctx.strokeRect(ARENA_X0 + 1, ARENA_Y0 + 1, ARENA_W - 2, ARENA_H - 2);
 
-  /* 受伤反馈：屏幕边缘一圈红色渐隐边框 */
+  ctx.restore(); // 结束相机 / 震动变换
+
+  /* 受伤反馈：屏幕边缘一圈红色渐隐边框（屏幕坐标，放大时也贴在屏幕四边） */
   drawHitVignette();
 }
 
