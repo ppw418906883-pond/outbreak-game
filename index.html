@@ -362,7 +362,12 @@
     }
     .canvas-holder { margin: auto 0; }   /* 在 HUD 与方向键之间垂直居中 */
     .touch-pad {
-      position: static;                  /* 竖屏：摇杆进入文档流，落在画布下方 */
+      /* 竖屏：摇杆进入文档流，落在画布下方。
+         必须用 relative 而不是 static：底盘/摇杆头是 absolute + inset:0，
+         若父级 static 会改以 .stage 为定位基准，铺满整屏（曾出现巨大椭圆遮挡画面） */
+      position: relative;
+      inset: auto;                       /* 清掉横屏的 left / bottom 偏移 */
+      flex: 0 0 auto;
       margin: 16px auto 4px;
       width: clamp(120px, 34vw, 156px);
     }
