@@ -480,7 +480,7 @@
           <p class="hint" id="diff-note"></p>
           <button id="btn-start" class="btn">开始游戏</button>
           <p class="hint" id="start-goal">在 90 秒内把感染率做到 65%，达标的瞬间即获胜</p>
-          <p class="hint">WASD / 方向键移动 · 手机拖动下方摇杆 · P 或 Esc 暂停 · M 静音 · 回车开始 · v14</p>
+          <p class="hint">WASD / 方向键移动 · 手机拖动下方摇杆 · P 或 Esc 暂停 · M 静音 · 回车开始 · v15</p>
         </div>
       </div>
 
@@ -896,16 +896,16 @@ canvas.addEventListener('contextmenu', function (e) { e.preventDefault(); }); //
 /* ======================================================
  * 五-2、触屏虚拟摇杆（手机端移动）
  * ====================================================== */
-const touchVec = { x: 0, y: 0 };   // 归一化方向 × 力度（死区外 0~1）
+const touchVec = { x: 0, y: 0, mag: 0 };   // 归一化方向 × 力度（死区外 0~1），mag 为已算好的力度
 let touchId = null;                // 当前按在摇杆上的手指
 let touchPadRect = null;           // 摇杆矩形缓存（按下时测量，拖动期间复用，避免逐帧同步布局）
-const TOUCH_DEAD = 0.02;           // 死区 2%：几乎零延迟，轻微抖动仍被过滤
-const TOUCH_FULL = 0.10;           // 推过 10% 半径即满力（极轻推也能立刻全速）
+const TOUCH_DEAD = 0.012;          // 死区 1.2%：只剩硬件抖动过滤，起手即响应
+const TOUCH_FULL = 0.055;          // 推过 5.5% 半径即满力：极轻推也立刻全速
 let knobX = 0, knobY = 0;          // 上次写入的摇杆头位移，位置几乎没变时跳过样式写入
 
 /* 松手回中：方向清零，摇杆头弹回中心 */
 function resetTouch() {
-  touchVec.x = 0; touchVec.y = 0;
+  touchVec.x = 0; touchVec.y = 0; touchVec.mag = 0;
   touchId = null;
   knobX = 0; knobY = 0;
   touchPad.classList.remove('dragging');
@@ -925,16 +925,18 @@ function setTouchFrom(e) {
   let len = rawLen;
   if (rawLen > max) { const s = max / rawLen; dx *= s; dy *= s; len = max; } // 超出半径：钳制在边缘
   /* 摇杆头位移只在明显变化时写样式，减少每帧 style 解析 */
-  if (Math.abs(dx - knobX) > 0.4 || Math.abs(dy - knobY) > 0.4) {
+  if (Math.abs(dx - knobX) > 0.3 || Math.abs(dy - knobY) > 0.3) {
     knobX = dx; knobY = dy;
     touchKnob.style.transform = 'translate3d(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px,0)';
   }
-  if (len === 0) { touchVec.x = 0; touchVec.y = 0; return; }
+  if (len === 0) { touchVec.x = 0; touchVec.y = 0; touchVec.mag = 0; return; }
   const mag = len / max;
-  if (mag <= TOUCH_DEAD) { touchVec.x = 0; touchVec.y = 0; return; }
-  const k = Math.min(1, (mag - TOUCH_DEAD) / TOUCH_FULL) / len;   // 死区外立刻拉满
+  if (mag <= TOUCH_DEAD) { touchVec.x = 0; touchVec.y = 0; touchVec.mag = 0; return; }
+  const force = Math.min(1, (mag - TOUCH_DEAD) / TOUCH_FULL);   // 死区外立刻拉满
+  const k = force / len;
   touchVec.x = dx * k;
   touchVec.y = dy * k;
+  touchVec.mag = force;
 }
 
 touchPad.addEventListener('pointerdown', function (e) {
@@ -1254,11 +1256,13 @@ function updatePlayer(dt) {
   const len = Math.hypot(ix, iy);
   if (len > 0) {
     ix /= len; iy /= len; // 归一化，斜向不加速
-    const touchMag = Math.hypot(touchVec.x, touchVec.y);
-    if (touchMag > 0.001) {
-      /* 触屏直接速度制：跳过加速度爬升，1 帧内即达到目标速度（延迟感主要来源） */
-      player.vx = ix * PLAYER_MAX_SPEED * Math.min(1, touchMag);
-      player.vy = iy * PLAYER_MAX_SPEED * Math.min(1, touchMag);
+    const touchMag = touchVec.mag;   // 力度已在摇杆回调里算好，避免每帧重复开方
+    if (touchMag > 0) {
+      /* 触屏直接速度制：跳过加速度爬升，1 帧内即达到目标速度（延迟感主要来源）
+         力度过半即视为满速，避免"推了却走不快"的错觉 */
+      const sp = PLAYER_MAX_SPEED * (touchMag > 0.5 ? 1 : touchMag * 2);
+      player.vx = ix * sp;
+      player.vy = iy * sp;
     } else {
       player.vx += ix * PLAYER_ACCEL * dt;
       player.vy += iy * PLAYER_ACCEL * dt;
