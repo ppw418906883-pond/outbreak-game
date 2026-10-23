@@ -368,7 +368,7 @@
       position: relative;
       inset: auto;                       /* 清掉横屏的 left / bottom 偏移 */
       flex: 0 0 auto;
-      margin: 16px auto 4px;
+      margin: 14px auto 26px;             /* 底边留 26px：摇杆整体上移一点，拇指更顺手 */
       width: clamp(150px, 42vw, 196px);
     }
     /* .stage 带 layout containment，fixed 遮罩以 stage 为基准铺满整屏 */
@@ -480,7 +480,7 @@
           <p class="hint" id="diff-note"></p>
           <button id="btn-start" class="btn">开始游戏</button>
           <p class="hint" id="start-goal">在 90 秒内把感染率做到 65%，达标的瞬间即获胜</p>
-          <p class="hint">WASD / 方向键移动 · 手机拖动左下摇杆 · P 或 Esc 暂停 · M 静音 · 回车开始 · v12</p>
+          <p class="hint">WASD / 方向键移动 · 手机拖动下方摇杆 · P 或 Esc 暂停 · M 静音 · 回车开始 · v14</p>
         </div>
       </div>
 
@@ -2334,7 +2334,7 @@ function updateStartScreen() {
   const spawnTail = spawnThresholds.length > 1 ? ' 各增援 1 ' + spawnWho : ' 增援 1 ' + spawnWho;
   const speedText = difficulty === 'hard' ? '你的 55% + 30%（约 72%）' : '你的 55%';
   if (virus) {
-    startRules.textContent = '用 WASD 移动（手机拖动左下角摇杆），把尽可能多的路人传染成红色，躲开医生！';
+    startRules.textContent = '用 WASD 移动（手机拖动下方摇杆），把尽可能多的路人传染成红色，躲开医生！';
     startLegend.innerHTML =
       '<li><span class="dot dot-player"></span>你（零号病人）：红色大圆，贴身接触普通人即可传染</li>' +
       '<li><span class="dot dot-normal"></span>普通人：灰色小圆，被感染后会转身追逐其他人</li>' +
@@ -2347,7 +2347,7 @@ function updateStartScreen() {
       ' · ' + maxLives + ' 条生命 · ' + gameDuration + ' 秒 · 目标 ' + winPct + '%';
   } else {
     const total = totalTargets;
-    startRules.textContent = '用 WASD 移动（手机拖动左下角摇杆），靠近红色病毒即可治愈；躲开头顶皇冠的病毒王！';
+    startRules.textContent = '用 WASD 移动（手机拖动下方摇杆），靠近红色病毒即可治愈；躲开头顶皇冠的病毒王！';
     startLegend.innerHTML =
       '<li><span class="dot dot-doctor"></span>你（医生）：白色大圆 + 红十字，碰到红色病毒立即治愈成灰色（无冷却）</li>' +
       '<li><span class="dot dot-king"></span>病毒王：深红大圆 + 皇冠 + "王"字；开局病毒王出生即主动追击你，被抓住扣 1 条生命并眩晕 1 秒，随后它冷静 5 秒</li>' +
